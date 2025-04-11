@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const ResetPassword = () => {
+const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
-  const handleResetPassword = async (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
 
     try {
@@ -17,7 +17,7 @@ const ResetPassword = () => {
 
       // Use Supabase's built-in password reset functionality
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: `${window.location.origin}/recover-account`,
       });
 
       if (error) throw error;
@@ -47,7 +47,7 @@ const ResetPassword = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleResetPassword}>
+          <form className="space-y-6" onSubmit={handleForgotPassword}>
             <div>
               <label
                 htmlFor="email"
@@ -119,4 +119,4 @@ const ResetPassword = () => {
   );
 };
 
-export default ResetPassword;
+export default ForgotPassword;
