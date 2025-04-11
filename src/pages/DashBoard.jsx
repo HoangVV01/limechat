@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import GroupList from "./GroupList";
 import ChatBox from "./ChatBox";
 import { supabase } from "../supabaseClient";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const DashBoard = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -10,6 +11,7 @@ const DashBoard = () => {
     { id: 2, name: "Project Beta", unread: 0 },
     { id: 3, name: "General Chat", unread: 5 },
   ]);
+  const navigate = useNavigate(); // Initialize navigate
 
   const handleCreateGroup = () => {
     const newGroupName = prompt("Enter the name of the new group:");
@@ -25,7 +27,7 @@ const DashBoard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/sign-in"; // Redirect to sign-in page
+    navigate("/sign-in"); // Redirect to sign-in page
   };
 
   return (
