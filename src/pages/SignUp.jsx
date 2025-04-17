@@ -23,29 +23,37 @@ const SignUp = () => {
       setLoading(true);
       setError(null);
 
-      // Here's where you connect to Supabase for authentication
-      const { data, error } = await supabase.auth.signUp({
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          // Optional: You can add additional user metadata
-          data: {
-            // Add any custom user metadata you want
-            // full_name: fullName,
-          },
-        },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      console.log("Sign up successful:", data);
+      if (authData?.user) {
+        // Create a user record in the users table
+        const { error: userError } = await supabase.from("users").insert([
+          {
+            id: authData.user.id,
+            email: authData.user.email,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
 
-      if (data?.user?.identities?.length === 0) {
+        if (userError) {
+          console.error("Error creating user record:", userError);
+          throw userError;
+        }
+      }
+
+      if (authData?.user?.identities?.length === 0) {
         setMessage("This email is already registered. Please log in instead.");
       } else {
         setMessage("Check your email for the confirmation link!");
-        // If you want to redirect after registration, uncomment:
-        // setTimeout(() => navigate('/verify-email'), 3000);
+        // Redirect to dashboard after successful signup
+        setTimeout(() => navigate("/dashboard"), 3000);
       }
     } catch (error) {
       console.error("Error during sign up:", error);

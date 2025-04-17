@@ -9,6 +9,7 @@ import SignIn from "./pages/SignIn";
 import ForgotPassword from "./pages/ForgotPassword";
 import RecoverAccount from "./pages/RecoverAccount";
 import DashBoard from "./pages/DashBoard";
+import Profile from "./pages/Profile";
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
@@ -55,6 +56,7 @@ function App() {
       <Route path="/sign-up" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/recover-account" element={<RecoverAccount />} />
+      <Route path="/profile" element={<Profile />} />
     </Routes>
   );
 }
