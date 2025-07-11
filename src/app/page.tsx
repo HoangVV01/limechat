@@ -123,7 +123,7 @@ function ChatApp() {
         created_at: conversation.created_at,
         is_group: conversation.is_group,
         name: email,
-        avatar: "/placeholder.svg?height=40&width=40",
+        avatar: "https://placehold.co/40x40s",
         lastMessage: "",
         timestamp: conversation.created_at,
         isOnline: false,
@@ -230,7 +230,9 @@ function ChatApp() {
                   <div className="relative">
                     <Avatar className="h-12 w-12">
                       <AvatarImage
-                        src={conversation.avatar || "/placeholder.svg"}
+                        src={
+                          conversation.avatar || "https://placehold.co/40x40s"
+                        }
                         alt={conversation.name}
                       />
                       <AvatarFallback>
@@ -281,7 +283,10 @@ function ChatApp() {
                 <div className="relative">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
-                      src={selectedConversation.avatar || "/placeholder.svg"}
+                      src={
+                        selectedConversation.avatar ||
+                        "https://placehold.co/40x40s"
+                      }
                       alt={selectedConversation.name}
                     />
                     <AvatarFallback>

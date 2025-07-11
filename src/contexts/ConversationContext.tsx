@@ -111,7 +111,7 @@ export function ConversationProvider({
           created_at: conv.created_at,
           is_group: conv.is_group,
           name: `Conversation ${conv.id.slice(0, 8)}`,
-          avatar: "/placeholder.svg?height=40&width=40",
+          avatar: "https://placehold.co/40x40s",
           lastMessage: conv.lastMessage,
           timestamp: formatTimestamp(conv.lastMessageTime),
           isOnline: false,
