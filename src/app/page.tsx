@@ -29,7 +29,6 @@ function ChatApp() {
     selectedConversation,
     loading: conversationsLoading,
     error: conversationsError,
-    createConversation,
     selectConversation,
   } = useConversations();
 
