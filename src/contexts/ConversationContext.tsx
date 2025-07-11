@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import supabase from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -51,7 +52,7 @@ export function ConversationProvider({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!session?.user) return;
 
     setLoading(true);
@@ -109,17 +110,16 @@ export function ConversationProvider({
           id: conv.id,
           created_at: conv.created_at,
           is_group: conv.is_group,
-          name: `Conversation ${conv.id.slice(0, 8)}`, // Generate a default name
+          name: `Conversation ${conv.id.slice(0, 8)}`,
           avatar: "/placeholder.svg?height=40&width=40",
           lastMessage: conv.lastMessage,
           timestamp: formatTimestamp(conv.lastMessageTime),
-          isOnline: false, // This would need to be calculated based on user presence
-          unreadCount: 0, // TODO: Implement unread count
+          isOnline: false,
+          unreadCount: 0,
         }));
 
       setConversations(transformedConversations);
 
-      // Select first conversation if none selected
       if (!selectedConversation && transformedConversations.length > 0) {
         setSelectedConversation(transformedConversations[0]);
       }
@@ -131,7 +131,7 @@ export function ConversationProvider({
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user, selectedConversation]);
 
   const createConversation = async (name: string, isGroup: boolean) => {
     if (!session?.user) return;
@@ -286,7 +286,7 @@ export function ConversationProvider({
       setConversations([]);
       setSelectedConversation(null);
     }
-  }, [session?.user]);
+  }, [session?.user, fetchConversations]);
 
   const value: ConversationContextType = {
     conversations,

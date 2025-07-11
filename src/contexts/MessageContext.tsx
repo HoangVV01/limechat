@@ -253,7 +253,7 @@ export function MessageProvider({
       channel.unsubscribe();
       setSubscription(null);
     };
-  }, [session?.user, currentConversationId, markAsRead]);
+  }, [session?.user, currentConversationId, markAsRead, subscription]);
 
   // Cleanup subscription on unmount
   useEffect(() => {
