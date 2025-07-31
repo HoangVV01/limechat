@@ -162,94 +162,93 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
   // Set up real-time subscription for new messages
   useEffect(() => {
-    if (!session?.user || !currentConversationId) {
-      if (subscription) {
-        subscription.unsubscribe();
-        setSubscription(null);
+    let currentChannel: RealtimeChannel | null = null;
+
+    const setupSubscription = async () => {
+      if (!session?.user || !currentConversationId) {
+        return;
       }
-      return;
-    }
 
-    // Unsubscribe from previous subscription
-    if (subscription) {
-      subscription.unsubscribe();
-    }
+      currentChannel = supabase
+        .channel(`messages:${currentConversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${currentConversationId}`,
+          },
+          async (payload) => {
+            // Only add the message if it's not from the current user (to avoid duplicates)
+            if (payload.new.sender_id !== session.user.id) {
+              try {
+                // Fetch the sender's profile to get the username
+                const { data: profile } = await supabase
+                  .from("profiles")
+                  .select("username, avatar_url")
+                  .eq("id", payload.new.sender_id)
+                  .single();
 
-    const channel = supabase
-      .channel(`messages:${currentConversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${currentConversationId}`,
-        },
-        async (payload) => {
-          // Only add the message if it's not from the current user (to avoid duplicates)
-          if (payload.new.sender_id !== session.user.id) {
-            try {
-              // Fetch the sender's profile to get the username
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("username, avatar_url")
-                .eq("id", payload.new.sender_id)
-                .single();
+                const newMessage: Message = {
+                  id: payload.new.id,
+                  content: payload.new.content,
+                  created_at: payload.new.created_at,
+                  sender: profile?.username || "Unknown User",
+                  isOwn: false,
+                };
 
-              const newMessage: Message = {
-                id: payload.new.id,
-                content: payload.new.content,
-                created_at: payload.new.created_at,
-                sender: profile?.username || "Unknown User",
-                isOwn: false,
-              };
+                setMessages((prev) => [...prev, newMessage]);
 
-              setMessages((prev) => [...prev, newMessage]);
-
-              // Mark messages as read when they come in
-              await markAsRead(currentConversationId);
-            } catch (err) {
-              console.error("Error fetching sender profile:", err);
-              // Fallback to basic message if profile fetch fails
-              const newMessage: Message = {
-                id: payload.new.id,
-                content: payload.new.content,
-                created_at: payload.new.created_at,
-                sender: "User",
-                isOwn: false,
-              };
-              setMessages((prev) => [...prev, newMessage]);
+                // Mark messages as read when they come in
+                await markAsRead(currentConversationId);
+              } catch (err) {
+                console.error("Error fetching sender profile:", err);
+                // Fallback to basic message if profile fetch fails
+                const newMessage: Message = {
+                  id: payload.new.id,
+                  content: payload.new.content,
+                  created_at: payload.new.created_at,
+                  sender: "User",
+                  isOwn: false,
+                };
+                setMessages((prev) => [...prev, newMessage]);
+              }
             }
           }
-        }
-      )
-      .on("presence", { event: "sync" }, () => {
-        console.log("Presence sync");
-      })
-      .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("Presence join:", key, newPresences);
-      })
-      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("Presence leave:", key, leftPresences);
-      })
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-        setIsConnected(status === "SUBSCRIBED");
+        )
+        .on("presence", { event: "sync" }, () => {
+          console.log("Presence sync");
+        })
+        .on("presence", { event: "join" }, ({ key, newPresences }) => {
+          console.log("Presence join:", key, newPresences);
+        })
+        .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+          console.log("Presence leave:", key, leftPresences);
+        })
+        .subscribe((status) => {
+          console.log("Subscription status:", status);
+          setIsConnected(status === "SUBSCRIBED");
 
-        if (status === "CHANNEL_ERROR") {
-          setError("Failed to connect to realtime channel");
-        } else if (status === "SUBSCRIBED") {
-          setError(null);
-        }
-      });
+          if (status === "CHANNEL_ERROR") {
+            setError("Failed to connect to realtime channel");
+          } else if (status === "SUBSCRIBED") {
+            setError(null);
+          }
+        });
 
-    setSubscription(channel);
+      setSubscription(currentChannel);
+    };
+
+    setupSubscription();
 
     return () => {
-      channel.unsubscribe();
+      if (currentChannel) {
+        currentChannel.unsubscribe();
+      }
       setSubscription(null);
     };
-  }, [session?.user, currentConversationId, markAsRead, subscription]);
+  }, [session?.user, currentConversationId, markAsRead]);
 
   // Cleanup subscription on unmount
   useEffect(() => {
@@ -258,7 +257,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       }
     };
-  }, [subscription]);
+  }, []);
 
   const value: MessageContextType = {
     messages,
