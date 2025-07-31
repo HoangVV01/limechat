@@ -108,7 +108,6 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
           let username = "Unknown User";
           let avatarText = "?";
-          let avatarUrl = "";
 
           // Get other participants (user_ids) except yourself
 if (participants && participants.length > 0) {
@@ -123,7 +122,6 @@ if (participants && participants.length > 0) {
   if (profile && profile.username) {
     username = profile.username;
     avatarText = username[0].toUpperCase();
-    avatarUrl = profile.avatar_url || "";
   }
 }
 
