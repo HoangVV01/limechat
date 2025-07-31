@@ -1,5 +1,4 @@
 import React from "react";
-import { Wifi, WifiOff, AlertCircle } from "lucide-react";
 
 interface RealtimeStatusProps {
   isConnected: boolean;
@@ -7,33 +6,22 @@ interface RealtimeStatusProps {
   className?: string;
 }
 
-export function RealtimeStatus({
-  isConnected,
-  error,
-  className = "",
-}: RealtimeStatusProps) {
+export function RealtimeStatus({ isConnected, error, className = "" }: RealtimeStatusProps) {
   if (error) {
+    // Optionally, you could show a red dot for error
     return (
-      <div className={`flex items-center space-x-2 text-red-500 ${className}`}>
-        <AlertCircle className="h-4 w-4" />
-        <span className="text-xs">Connection Error</span>
-      </div>
+      <span
+        className={`inline-block w-3 h-3 rounded-full bg-red-500 ${className}`}
+        aria-label="Connection Error"
+        title="Connection Error"
+      />
     );
   }
-
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
-      {isConnected ? (
-        <>
-          <Wifi className="h-4 w-4 text-green-500" />
-          <span className="text-xs text-green-600">Connected</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="h-4 w-4 text-gray-400" />
-          <span className="text-xs text-gray-500">Connecting...</span>
-        </>
-      )}
-    </div>
+    <span
+      className={`inline-block w-3 h-3 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"} ${className}`}
+      aria-label={isConnected ? "Online" : "Offline"}
+      title={isConnected ? "Online" : "Offline"}
+    />
   );
 }

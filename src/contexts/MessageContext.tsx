@@ -8,8 +8,9 @@ import React, {
   useCallback,
 } from "react";
 import supabase from "@/lib/supabaseClient";
-import type { Session, RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Message as DbMessage } from "@/types/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Message extends Omit<DbMessage, "conversation_id" | "sender_id"> {
   sender: string;
@@ -29,13 +30,8 @@ interface MessageContextType {
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
-export function MessageProvider({
-  children,
-  session,
-}: {
-  children: ReactNode;
-  session: Session | null;
-}) {
+export function MessageProvider({ children }: { children: ReactNode }) {
+  const session = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

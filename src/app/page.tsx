@@ -1,27 +1,73 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type React from "react";
-import { Search, Smile, Plus, Send } from "lucide-react";
+import { Search, Smile, Plus, Send, Sun, Moon } from "lucide-react";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
+import { GiphyFetch } from "@giphy/js-fetch-api";
+import { Grid } from "@giphy/react-components";
+import styled from "styled-components";
+
+type EmojiObject = {
+  id: string;
+  name: string;
+  native: string;
+  unified: string;
+  keywords: string[];
+  shortcodes: string;
+};
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RealtimeStatus } from "@/components/RealtimeStatus";
 import supabase from "@/lib/supabaseClient";
-import type { Session } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   useConversations,
   ConversationProvider,
 } from "@/contexts/ConversationContext";
 import { useMessages, MessageProvider } from "@/contexts/MessageContext";
 import { getOrCreateOneToOneConversation } from "@/lib/utils";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { UserSearchModal } from "@/components/UserSearchModal";
+import type { UserProfile } from "@/components/UserSearchModal";
+
+// Initialize the GIPHY client
+const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY!);
+
+const GifPickerContainer = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 0.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 320px;
+  height: 400px;
+  .giphy-grid {
+    overflow-y: auto;
+    height: calc(100% - 60px);
+  }
+`;
 
 function ChatApp() {
+  // Remove session and router logic from here
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifSearchQuery, setGifSearchQuery] = useState("");
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const gifButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Use context for session
+  const session = useAuth();
   const router = useRouter();
 
   const {
@@ -44,7 +90,6 @@ function ChatApp() {
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
-      setSession(data.session);
       if (!data.session) {
         router.replace("/auth/login");
       }
@@ -52,7 +97,6 @@ function ChatApp() {
     getSession();
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setSession(session);
         if (!session) {
           router.replace("/auth/login");
         }
@@ -70,9 +114,41 @@ function ChatApp() {
     }
   }, [selectedConversation, fetchMessages]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const emojiPickerElement = document.querySelector('[data-emoji-picker="true"]');
+      const gifPickerElement = document.querySelector('[data-gif-picker="true"]');
+      
+      if (
+        showEmojiPicker &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(target) &&
+        emojiPickerElement &&
+        !emojiPickerElement.contains(target)
+      ) {
+        setShowEmojiPicker(false);
+      }
+
+      if (
+        showGifPicker &&
+        gifButtonRef.current &&
+        !gifButtonRef.current.contains(target) &&
+        gifPickerElement &&
+        !gifPickerElement.contains(target)
+      ) {
+        setShowGifPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker, showGifPicker]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setSession(null);
   };
 
   const filteredConversations = conversations.filter((conv) =>
@@ -93,71 +169,27 @@ function ChatApp() {
     }
   };
 
-  const handleCreateConversation = async () => {
-    if (!session?.user) return;
-    const email = prompt(
-      "Enter the email address of the person you want to chat with:"
-    );
-    if (!email || !email.trim()) return;
+  // User search is now handled by UserSearchModal component
 
-    // Look up the other user's ID by email
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", email)
-      .single();
-
-    if (profileError || !profile) {
-      alert("User not found");
-      return;
-    }
-
-    const conversation = await getOrCreateOneToOneConversation(
-      session.user.id,
-      profile.id
-    );
-    if (conversation) {
-      // Select the conversation in the UI
-      selectConversation({
-        id: conversation.id,
-        created_at: conversation.created_at,
-        is_group: conversation.is_group,
-        name: email,
-        avatar: "https://placehold.co/40x40s",
-        lastMessage: "",
-        timestamp: conversation.created_at,
-        isOnline: false,
-        unreadCount: 0,
-      });
+  // Effect to handle dark mode changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
     } else {
-      alert("Failed to create or fetch conversation");
+      document.documentElement.classList.remove('dark');
     }
-  };
+  }, [isDarkMode]);
 
   if (!session) {
     return null;
   }
 
-  if (conversationsLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading conversations...</div>
-      </div>
-    );
-  }
-
-  if (conversationsError) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-red-500">Error: {conversationsError}</div>
-      </div>
-    );
-  }
+  // Main content is now directly in the return statement
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className={`flex h-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
       {/* Sidebar */}
-      <div className="w-80 border-r border-gray-200 flex flex-col">
+      <div className={`w-96 border-r flex flex-col h-full ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -189,13 +221,43 @@ function ChatApp() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleCreateConversation}
+              onClick={() => setShowUserSearch(true)}
             >
               <Plus className="h-5 w-5" />
             </Button>
           </div>
 
           <h1 className="text-xl font-bold mb-3">Chats</h1>
+
+          {/* User Search Modal */}
+          <UserSearchModal
+            open={showUserSearch}
+            onClose={() => setShowUserSearch(false)}
+            onUserSelect={async (user: UserProfile) => {
+              try {
+                const conversation = await getOrCreateOneToOneConversation(
+                  session!.user.id,
+                  user.id
+                );
+                if (conversation) {
+                  selectConversation({
+                    id: conversation.id,
+                    created_at: conversation.created_at,
+                    is_group: conversation.is_group,
+                    name: user.username, // Always use the other user's username
+                    avatar: user.avatar_url || "https://placehold.co/40x40s",
+                    lastMessage: "",
+                    timestamp: conversation.created_at,
+                    isOnline: false,
+                  });
+                  setShowUserSearch(false);
+                } 
+              } catch (error) {
+                console.error('Failed to create conversation:', error);
+                alert('Failed to create conversation');
+              }
+            }}
+          />
 
           {/* Search */}
           <div className="relative">
@@ -210,8 +272,9 @@ function ChatApp() {
         </div>
 
         {/* Conversations List */}
-        <ScrollArea className="flex-1">
-          <div className="p-2">
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-2">
             {filteredConversations.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 No conversations yet. Click the + button to create one!
@@ -260,22 +323,25 @@ function ChatApp() {
                       {conversation.lastMessage}
                     </p>
                   </div>
-
-                  {conversation.unreadCount && (
-                    <div className="ml-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {conversation.unreadCount}
-                    </div>
-                  )}
-                </div>
+                  </div>
               ))
             )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedConversation ? (
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {conversationsLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-lg">Loading conversations...</div>
+          </div>
+        ) : conversationsError ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-red-500">Error: {conversationsError}</div>
+          </div>
+        ) : selectedConversation ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -317,6 +383,18 @@ function ChatApp() {
                   isConnected={isConnected}
                   error={messagesError}
                 />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="mr-2"
+                >
+                  {isDarkMode ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </Button>
                 <Button variant="ghost" size="icon" onClick={handleLogout}>
                   Logout
                 </Button>
@@ -324,15 +402,16 @@ function ChatApp() {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              {messagesLoading && (
-                <div className="text-xs text-gray-400 mb-2">Loading...</div>
-              )}
-              {messagesError ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-red-500">Error: {messagesError}</div>
-                </div>
-              ) : messages.length === 0 && !messagesLoading ? (
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full p-4">
+                {messagesLoading && (
+                  <div className="text-xs text-gray-400 mb-2">Loading...</div>
+                )}
+                {messagesError ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-red-500">Error: {messagesError}</div>
+                  </div>
+                ) : messages.length === 0 && !messagesLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center text-gray-500">
                     <h3 className="text-lg font-medium mb-2">
@@ -374,28 +453,85 @@ function ChatApp() {
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div
-                          className={`px-4 py-2 rounded-2xl ${
-                            message.isOwn
-                              ? "bg-blue-500 text-white rounded-br-md"
-                              : "bg-gray-100 text-gray-900 rounded-bl-md"
-                          }`}
-                        >
-                          <p className="text-sm">{message.content}</p>
-                        </div>
+                        {message.content.match(/https?:\/\/.*\.(?:gif|mp4)/i) ? (
+                          <div style={{ maxWidth: '300px', position: 'relative' }}>
+                            <Image 
+                              src={message.content.trim()} 
+                              alt="GIF"
+                              width={300}
+                              height={200}
+                              className="rounded-lg object-contain"
+                              unoptimized // for GIFs to work properly
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`px-4 py-2 rounded-2xl ${
+                              message.isOwn
+                                ? "bg-blue-500 text-white rounded-br-md"
+                                : "bg-gray-100 text-gray-900 rounded-bl-md"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </ScrollArea>
+              </ScrollArea>
+            </div>
 
             {/* Message Input */}
             <div className="p-4 border-t border-gray-200">
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon">
-                  <Plus className="h-5 w-5 text-blue-500" />
-                </Button>
+                <div className="relative">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    ref={gifButtonRef}
+                    onClick={() => {
+                      setShowGifPicker(!showGifPicker);
+                      setShowEmojiPicker(false);
+                    }}
+                  >
+                    GIF
+                  </Button>
+                  {showGifPicker && (
+                    <GifPickerContainer
+                      data-gif-picker="true"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-2">
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 mb-2 border border-gray-200 rounded-lg"
+                          placeholder="Search GIFs..."
+                          value={gifSearchQuery}
+                          onChange={(e) => setGifSearchQuery(e.target.value)}
+                        />
+                      </div>
+                      <Grid
+                        key={gifSearchQuery}
+                        onGifClick={(gif) => {
+                          setMessageText(prev => prev + ` ${gif.images.fixed_height.url} `);
+                          setShowGifPicker(false);
+                        }}
+                        noLink={true}
+                        hideAttribution={true}
+                        fetchGifs={() =>
+                          gifSearchQuery
+                            ? gf.search(gifSearchQuery, { limit: 10 })
+                            : gf.trending({ limit: 10 })
+                        }
+                        width={300}
+                        columns={2}
+                        gutter={6}
+                      />
+                    </GifPickerContainer>
+                  )}
+                </div>
 
                 <div className="flex-1 relative">
                   <input
@@ -406,9 +542,35 @@ function ChatApp() {
                     className="w-full px-3 py-2 pr-20 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Smile className="h-4 w-4 text-gray-400" />
-                    </Button>
+                    <div className="relative">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        ref={emojiButtonRef}
+                      >
+                        <Smile className="h-4 w-4 text-gray-400" />
+                      </Button>
+                      {showEmojiPicker && (
+                        <div 
+                          className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg"
+                          onClick={(e) => e.stopPropagation()}
+                          data-emoji-picker="true"
+                          style={{ backgroundColor: 'white' }}
+                        >
+                          <Picker 
+                            data={data} 
+                            previewPosition="none"
+                            theme="light"
+                            onEmojiSelect={(emoji: EmojiObject) => {
+                              setMessageText(prev => prev + emoji.native);
+                              setShowEmojiPicker(false);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -439,40 +601,13 @@ function ChatApp() {
 }
 
 export default function HomePage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      if (!data.session) {
-        router.replace("/auth/login");
-      }
-    };
-    getSession();
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (!session) {
-          router.replace("/auth/login");
-        }
-      }
-    );
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, [router]);
-
-  if (!session) {
-    return null;
-  }
-
   return (
-    <ConversationProvider session={session}>
-      <MessageProvider session={session}>
-        <ChatApp />
-      </MessageProvider>
-    </ConversationProvider>
+    <AuthProvider>
+      <ConversationProvider>
+        <MessageProvider>
+          <ChatApp />
+        </MessageProvider>
+      </ConversationProvider>
+    </AuthProvider>
   );
 }
