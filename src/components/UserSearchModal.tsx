@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -39,6 +40,7 @@ interface UserSearchModalProps {
 }
 
 export const UserSearchModal: React.FC<UserSearchModalProps> = ({ open, onClose, onUserSelect }) => {
+  const session = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,10 +61,17 @@ export const UserSearchModal: React.FC<UserSearchModalProps> = ({ open, onClose,
     setLoading(true);
     setError("");
     const timeout = setTimeout(async () => {
+      if (!session?.user) {
+        setError("Authentication required");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, avatar_url")
-        .ilike("username", `*${query}*`);
+        .ilike("username", `*${query}*`)
+        .neq("id", session.user.id);
       setLoading(false);
       if (error) {
         setError("Error searching users");
@@ -75,7 +84,7 @@ export const UserSearchModal: React.FC<UserSearchModalProps> = ({ open, onClose,
       }
     }, 400); // debounce
     return () => clearTimeout(timeout);
-  }, [query, open]);
+  }, [query, open, session?.user]);
 
   if (!open) return null;
 

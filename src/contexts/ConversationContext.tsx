@@ -96,10 +96,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             .from("conversation_participants")
             .select(`
               user_id,
-              user:user_id (
+              profiles:user_id (
                 id,
                 username,
-                full_name,
                 avatar_url
               )
             `)
@@ -115,7 +114,7 @@ if (participants && participants.length > 0) {
   // Fetch the profile for the other user
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, full_name, avatar_url")
+    .select("username, avatar_url")
     .eq("id", otherUserId)
     .single();
 
@@ -152,8 +151,8 @@ if (participants && participants.length > 0) {
           avatar: conv.avatar,
           lastMessage: conv.lastMessage,
           timestamp: formatTimestamp(conv.lastMessageTime),
-          isOnline: false,
           unreadCount: 0,
+          isOnline: false,
         }));
 
       setConversations(transformedConversations);
