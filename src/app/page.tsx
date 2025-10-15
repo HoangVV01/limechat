@@ -42,7 +42,7 @@ import { getOrCreateOneToOneConversation } from "@/lib/utils";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UserSearchModal } from "@/components/UserSearchModal";
 import type { UserProfile } from "@/components/UserSearchModal";
-import UserProfileModal from "./profile/page";
+import UserProfileModal from "@/components/UserProfileModal";
 
 // Initialize the GIPHY client
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY!);
