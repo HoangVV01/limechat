@@ -2,12 +2,21 @@
 
 import { useState, useEffect, useRef } from "react";
 import type React from "react";
-import { Search, Smile, Send, Sun, Moon, Paperclip, X, LogOut, UserPlus } from "lucide-react";
+import {
+  Search,
+  Smile,
+  Send,
+  Paperclip,
+  X,
+  LogOut,
+  UserPlus,
+} from "lucide-react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 import { Grid } from "@giphy/react-components";
 import styled from "styled-components";
+
 
 type EmojiObject = {
   id: string;
@@ -33,6 +42,7 @@ import { getOrCreateOneToOneConversation } from "@/lib/utils";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UserSearchModal } from "@/components/UserSearchModal";
 import type { UserProfile } from "@/components/UserSearchModal";
+import UserProfileModal from "./profile/page";
 
 // Initialize the GIPHY client
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY!);
@@ -55,13 +65,14 @@ const GifPickerContainer = styled.div`
 
 function ChatApp() {
   // Remove session and router logic from here
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifSearchQuery, setGifSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const gifButtonRef = useRef<HTMLButtonElement>(null);
@@ -78,6 +89,12 @@ function ChatApp() {
     error: conversationsError,
     selectConversation,
   } = useConversations();
+
+  const roomId = selectedConversation?.id || "default-room";
+  const userId = session?.user?.id || "anonymous";
+  console.log("Room ID:", roomId, "User ID:", userId);
+
+
 
   const {
     messages,
@@ -117,8 +134,12 @@ function ChatApp() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const emojiPickerElement = document.querySelector('[data-emoji-picker="true"]');
-      const gifPickerElement = document.querySelector('[data-gif-picker="true"]');
+      const emojiPickerElement = document.querySelector(
+        '[data-emoji-picker="true"]'
+      );
+      const gifPickerElement = document.querySelector(
+        '[data-gif-picker="true"]'
+      );
 
       if (
         showEmojiPicker &&
@@ -160,7 +181,7 @@ function ChatApp() {
 
     try {
       const { data, error } = await supabase.storage
-        .from('chat-files')
+        .from("chat-files")
         .upload(`${selectedConversation.id}/${Date.now()}_${file.name}`, file);
 
       if (error) throw error;
@@ -169,8 +190,8 @@ function ChatApp() {
         return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-files/${data.path}`;
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file');
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file");
     }
     return null;
   };
@@ -208,7 +229,7 @@ function ChatApp() {
     }
     // Reset the input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -217,36 +238,29 @@ function ChatApp() {
   };
 
   const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
+    const extension = fileName.split(".").pop()?.toLowerCase();
 
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
-      return '🖼️';
-    } else if (['pdf'].includes(extension || '')) {
-      return '📄';
-    } else if (['doc', 'docx'].includes(extension || '')) {
-      return '📝';
-    } else if (['xls', 'xlsx'].includes(extension || '')) {
-      return '📊';
-    } else if (['txt'].includes(extension || '')) {
-      return '📃';
-    } else if (['mp4', 'avi', 'mov', 'wmv'].includes(extension || '')) {
-      return '🎥';
-    } else if (['mp3', 'wav', 'flac', 'aac'].includes(extension || '')) {
-      return '🎵';
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension || "")) {
+      return "🖼️";
+    } else if (["pdf"].includes(extension || "")) {
+      return "📄";
+    } else if (["doc", "docx"].includes(extension || "")) {
+      return "📝";
+    } else if (["xls", "xlsx"].includes(extension || "")) {
+      return "📊";
+    } else if (["txt"].includes(extension || "")) {
+      return "📃";
+    } else if (["mp4", "avi", "mov", "wmv"].includes(extension || "")) {
+      return "🎥";
+    } else if (["mp3", "wav", "flac", "aac"].includes(extension || "")) {
+      return "🎵";
     }
-    return '📎';
+    return "📎";
   };
 
   // User search is now handled by UserSearchModal component
 
-  // Effect to handle dark mode changes
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+
 
   if (!session) {
     return null;
@@ -255,14 +269,17 @@ function ChatApp() {
   // Main content is now directly in the return statement
 
   return (
-    <div className={`flex h-screen overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
+    <div className="flex h-screen overflow-hidden bg-white text-gray-900">
       {/* Sidebar */}
-      <div className={`w-96 border-r flex flex-col h-full ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+      <div className="w-96 border-r flex flex-col h-full border-gray-200 bg-white">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <div
+                className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer"
+                onClick={() => setIsModalOpen(true)}
+              >
                 <svg
                   className="w-5 h-5 text-white"
                   fill="currentColor"
@@ -292,15 +309,16 @@ function ChatApp() {
             </Button>
           </div>
 
-          <h1 className="text-xl font-bold mb-3">Chats 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowUserSearch(true)}
-          >
-            <UserPlus />
-          </Button></h1>
-         
+          <h1 className="text-xl font-bold mb-3">
+            Chats
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowUserSearch(true)}
+            >
+              <UserPlus />
+            </Button>
+          </h1>
 
           {/* User Search Modal */}
           <UserSearchModal
@@ -318,7 +336,8 @@ function ChatApp() {
                     created_at: conversation.created_at,
                     is_group: conversation.is_group,
                     name: user.username, // Always use the other user's username
-                    avatar: user.avatar_url || "https://placehold.co/40x40s",
+                    avatar_url:
+                      user.avatar_url || "https://placehold.co/40x40s",
                     lastMessage: "",
                     timestamp: conversation.created_at,
                     isOnline: false,
@@ -326,8 +345,8 @@ function ChatApp() {
                   setShowUserSearch(false);
                 }
               } catch (error) {
-                console.error('Failed to create conversation:', error);
-                alert('Failed to create conversation');
+                console.error("Failed to create conversation:", error);
+                alert("Failed to create conversation");
               }
             }}
           />
@@ -357,16 +376,18 @@ function ChatApp() {
                   <div
                     key={conversation.id}
                     onClick={() => selectConversation(conversation)}
-                    className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors ${selectedConversation?.id === conversation.id
-                      ? "bg-blue-50"
-                      : ""
-                      }`}
+                    className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors ${
+                      selectedConversation?.id === conversation.id
+                        ? "bg-blue-50"
+                        : ""
+                    }`}
                   >
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
                           src={
-                            conversation.avatar || "https://placehold.co/40x40s"
+                            conversation.avatar_url ||
+                            "https://placehold.co/40x40s"
                           }
                           alt={conversation.name}
                         />
@@ -377,7 +398,6 @@ function ChatApp() {
                             .join("")}
                         </AvatarFallback>
                       </Avatar>
-
                     </div>
 
                     <div className="ml-3 flex-1 min-w-0">
@@ -414,13 +434,13 @@ function ChatApp() {
         ) : selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center">
                 <div className="relative">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={
-                        selectedConversation.avatar ||
+                        selectedConversation.avatar_url ||
                         "https://placehold.co/40x40s"
                       }
                       alt={selectedConversation.name}
@@ -432,33 +452,16 @@ function ChatApp() {
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-
                 </div>
                 <div className="ml-3">
-                  <h2 className="font-semibold text-gray-900">
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
                     {selectedConversation.name}
                   </h2>
-                  <p className="text-sm text-gray-500">
-                    Active {selectedConversation.timestamp} ago
-                  </p>
+
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="mr-2"
-                >
-                  {isDarkMode ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                </Button>
 
-              </div>
             </div>
 
             {/* Messages */}
@@ -485,20 +488,22 @@ function ChatApp() {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${message.isOwn ? "justify-end" : "justify-start"
-                          }`}
+                        className={`flex ${
+                          message.isOwn ? "justify-end" : "justify-start"
+                        }`}
                       >
                         <div
-                          className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${message.isOwn
-                            ? "flex-row-reverse space-x-reverse"
-                            : ""
-                            }`}
+                          className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${
+                            message.isOwn
+                              ? "flex-row-reverse space-x-reverse"
+                              : ""
+                          }`}
                         >
                           {!message.isOwn && (
                             <Avatar className="h-6 w-6">
                               <AvatarImage
                                 src={
-                                  selectedConversation.avatar ||
+                                  selectedConversation.avatar_url ||
                                   "/placeholder.svg"
                                 }
                                 alt={selectedConversation.name}
@@ -511,8 +516,15 @@ function ChatApp() {
                               </AvatarFallback>
                             </Avatar>
                           )}
-                          {message.content.match(/https?:\/\/.*\.(?:gif|mp4)/i) ? (
-                            <div style={{ maxWidth: '300px', position: 'relative' }}>
+                          {message.content.match(
+                            /https?:\/\/.*\.(?:gif|mp4)/i
+                          ) ? (
+                            <div
+                              style={{
+                                maxWidth: "300px",
+                                position: "relative",
+                              }}
+                            >
                               <Image
                                 src={message.content.trim()}
                                 alt="GIF"
@@ -522,7 +534,9 @@ function ChatApp() {
                                 unoptimized // for GIFs to work properly
                               />
                             </div>
-                          ) : message.content.match(/https?:\/\/.*\.(?:jpg|jpeg|png|pdf|doc|docx|xls|xlsx|txt)/i) ? (
+                          ) : message.content.match(
+                              /https?:\/\/.*\.(?:jpg|jpeg|png|pdf|doc|docx|xls|xlsx|txt)/i
+                            ) ? (
                             <div className="flex items-center space-x-2 bg-gray-100 p-3 rounded-lg">
                               <Paperclip className="h-4 w-4 text-gray-500" />
                               <a
@@ -531,15 +545,16 @@ function ChatApp() {
                                 rel="noopener noreferrer"
                                 className="text-blue-500 hover:underline text-sm"
                               >
-                                {message.content.split('/').pop()}
+                                {message.content.split("/").pop()}
                               </a>
                             </div>
                           ) : (
                             <div
-                              className={`px-4 py-2 rounded-2xl ${message.isOwn
-                                ? "bg-blue-500 text-white rounded-br-md"
-                                : "bg-gray-100 text-gray-900 rounded-bl-md"
-                                }`}
+                              className={`px-4 py-2 rounded-2xl ${
+                                message.isOwn
+                                  ? "bg-blue-500 text-white rounded-br-md"
+                                  : "bg-gray-100 text-gray-900 rounded-bl-md"
+                              }`}
                             >
                               <p className="text-sm">{message.content}</p>
                             </div>
@@ -559,9 +574,13 @@ function ChatApp() {
                 <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{getFileIcon(selectedFile.name)}</span>
+                      <span className="text-2xl">
+                        {getFileIcon(selectedFile.name)}
+                      </span>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedFile.name}
+                        </p>
                         <p className="text-xs text-gray-500">
                           {(selectedFile.size / 1024).toFixed(1)} KB
                         </p>
@@ -624,7 +643,9 @@ function ChatApp() {
                       <Grid
                         key={gifSearchQuery}
                         onGifClick={(gif) => {
-                          setMessageText(prev => prev + ` ${gif.images.fixed_height.url} `);
+                          setMessageText(
+                            (prev) => prev + ` ${gif.images.fixed_height.url} `
+                          );
                           setShowGifPicker(false);
                         }}
                         noLink={true}
@@ -644,7 +665,11 @@ function ChatApp() {
 
                 <div className="flex-1 relative">
                   <input
-                    placeholder={selectedFile ? "File selected - click send to upload" : "Type a message..."}
+                    placeholder={
+                      selectedFile
+                        ? "File selected - click send to upload"
+                        : "Type a message..."
+                    }
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -668,14 +693,14 @@ function ChatApp() {
                           className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg"
                           onClick={(e) => e.stopPropagation()}
                           data-emoji-picker="true"
-                          style={{ backgroundColor: 'white' }}
+                          style={{ backgroundColor: "white" }}
                         >
                           <Picker
                             data={data}
                             previewPosition="none"
                             theme="light"
                             onEmojiSelect={(emoji: EmojiObject) => {
-                              setMessageText(prev => prev + emoji.native);
+                              setMessageText((prev) => prev + emoji.native);
                               setShowEmojiPicker(false);
                             }}
                           />
@@ -707,6 +732,17 @@ function ChatApp() {
           </div>
         )}
       </div>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialData={{
+          username: session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "",
+          avatarUrl: session?.user?.user_metadata?.avatar_url || null,
+        }}
+      />
+
     </div>
   );
 }

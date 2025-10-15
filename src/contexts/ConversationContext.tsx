@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface Conversation extends DbConversation {
   name: string;
-  avatar: string;
+  avatar_url: string;
   lastMessage: string;
   timestamp: string;
   isOnline: boolean;
@@ -148,7 +148,7 @@ if (participants && participants.length > 0) {
           created_at: conv.created_at,
           is_group: conv.is_group,
           name: conv.name,
-          avatar: conv.avatar,
+          avatar_url: conv.avatar_url,
           lastMessage: conv.lastMessage,
           timestamp: formatTimestamp(conv.lastMessageTime),
           unreadCount: 0,

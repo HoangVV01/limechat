@@ -257,7 +257,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [subscription]);
 
   const value: MessageContextType = {
     messages,
