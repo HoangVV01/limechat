@@ -180,6 +180,12 @@ export function Sidebar({setIsModalOpen }: SidebarProps) {
             )}
           </div>
         </ScrollArea>
+        <ins className="adsbygoogle"
+           style={{ display: 'block', textAlign: 'center' }}
+           data-ad-client="ca-pub-5022121679694814"
+           data-ad-slot="9334852581" 
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
       </div>
     </div>
   );

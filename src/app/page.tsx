@@ -14,6 +14,7 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessagesList } from "@/components/chat/MessagesList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import UserProfileModal from "@/components/UserProfileModal";
+import Script from 'next/script'
 
 function ChatApp() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,6 +121,14 @@ function ChatApp() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-white text-gray-900">
+       {/* Google AdSense Script */}
+      <Script
+        id="adsense-script"
+        strategy="afterInteractive" // loads after page is interactive
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5022121679694814"
+        crossOrigin="anonymous"
+      />
+
       <Sidebar isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
