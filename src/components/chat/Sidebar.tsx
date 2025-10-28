@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, LogOut, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,16 +14,13 @@ interface SidebarProps {
   setIsModalOpen: (open: boolean) => void;
 }
 
-export function Sidebar({setIsModalOpen }: SidebarProps) {
+export function Sidebar({ setIsModalOpen }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   const session = useAuth();
-  const {
-    conversations,
-    selectedConversation,
-    selectConversation,
-  } = useConversations();
+  const { conversations, selectedConversation, selectConversation } =
+    useConversations();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -32,6 +29,16 @@ export function Sidebar({setIsModalOpen }: SidebarProps) {
   const filteredConversations = conversations.filter((conv) =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+   // Initialize AdSense after component mounts
+  useEffect(() => {
+    try {
+      // @ts-ignore
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.error("Adsense push error:", e);
+    }
+  }, []);
 
   return (
     <div className="w-96 border-r flex flex-col h-full border-gray-200 bg-white">
@@ -180,12 +187,14 @@ export function Sidebar({setIsModalOpen }: SidebarProps) {
             )}
           </div>
         </ScrollArea>
-        <ins className="adsbygoogle"
-           style={{ display: 'block', textAlign: 'center' }}
-           data-ad-client="ca-pub-5022121679694814"
-           data-ad-slot="9334852581" 
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block", textAlign: "center" }}
+          data-ad-client="ca-pub-5022121679694814"
+          data-ad-slot="9334852581"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        ></ins>
       </div>
     </div>
   );
