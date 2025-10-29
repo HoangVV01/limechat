@@ -2,9 +2,13 @@
 
 import { useEffect } from 'react';
 
+interface AdsenseInsInstance {
+  [key: string]: unknown;
+}
+
 declare global {
   interface Window {
-    adsbygoogle: any[];
+    adsbygoogle: AdsenseInsInstance[];
   }
 }
 
